@@ -36,91 +36,99 @@
   </div>
 </template>
 
-
 <script>
-import { getPersonList, getDepartment } from "./request";
-export default {
-  model: {
-    event: "change",
-    prop: "value",
-  },
-  props: ["value"],
-  data() {
-    return {
-      popoverShow: false,
-      loading: false,
-      personList: [],
-      props: {
-        lazy: true,
-        value: "id",
-        emitPath: false,
-        lazyLoad: ({ root, data }, resolve) => {
-          if (root) {
-            getDepartment().then(resolve);
-          } else if (data.children) {
-            resolve(null);
-          } else {
-            getPersonList({ departmentId: data.id }).then((res) => {
-              this.personList = res;
-              resolve(
-                res.map(({ label, userId: id }) => ({ id, label, leaf: true }))
-              );
-            });
-          }
+  import { getPersonList, getDepartment } from "./request";
+  export default {
+    model: {
+      event: "change",
+      prop: "value",
+    },
+    props: ["value"],
+    data() {
+      return {
+        popoverShow: false,
+        loading: false,
+        personList: [],
+        props: {
+          lazy: true,
+          value: "id",
+          emitPath: false,
+          lazyLoad: ({ root, data }, resolve) => {
+            if (root) {
+              getDepartment().then(resolve);
+            } else if (data.children) {
+              resolve(null);
+            } else {
+              getPersonList({ departmentId: data.id }).then((res) => {
+                resolve(
+                  res.map(({ label, userId: id }) => ({
+                    id,
+                    label,
+                    leaf: true,
+                  }))
+                );
+              });
+            }
+          },
         },
+      };
+    },
+    methods: {
+      handleCascaderChange(value) {
+        this.popoverShow = false;
+        const { cascader } = this.$refs;
+
+        if (value) {
+          this.$emit("change", value);
+          this.personList = cascader.menus[cascader.menus.length - 1].map(
+            ({ data }) => ({ userId: data.id, label: data.label })
+          );
+        }
+        cascader.clearCheckedNodes();
+        cascader.activePath = [];
+
+        cascader.menus = cascader.menus.slice(0, 1);
       },
-    };
-  },
-  methods: {
-    handleCascaderChange(value) {
-      this.popoverShow = false;
-      if (value) {
-        this.$emit("change", value);
-      }
-      this.$refs.cascader.clearCheckedNodes();
-      this.$refs.cascader.activePath = [];
-      this.$refs.cascader.menus = this.$refs.cascader.menus.slice(0, 1);
+      getPersonList(query) {
+        this.loading = true;
+        getPersonList({ keyword: query })
+          .then((res) => {
+            this.personList = res;
+          })
+          .finally(() => {
+            this.loading = false;
+          });
+      },
     },
-    getPersonList(query) {
-      this.loading = true;
-      getPersonList({ keyword: query })
-        .then((res) => {
-          this.personList = res;
-        })
-        .finally(() => {
-          this.loading = false;
-        });
+    created() {
+      this.getPersonList("");
     },
-  },
-  created() {
-    this.getPersonList("");
-  },
-};
+  };
 </script>
 
 <style scoped>
-.wrapper {
-  display: inline-block;
-  position: relative;
-}
-.filter-select ::v-deep .el-input__suffix {
-  display: none;
-}
-.suffix {
-  height: auto;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  margin: auto 0;
-  right: 10px;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-}
+  .wrapper {
+    display: inline-block;
+    position: relative;
+  }
+  .filter-select ::v-deep .el-input__suffix {
+    display: none;
+  }
+  .suffix {
+    height: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin: auto 0;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+  }
 </style>
 
 <style>
-.person-select-popover {
-  padding: 0;
-}
+  .person-select-popover {
+    padding: 0;
+  }
 </style>
