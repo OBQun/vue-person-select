@@ -18,26 +18,26 @@
 </template>
 
 <script>
-import PersonSelect from "./PersonSelect";
-export default {
-  name: "App",
-  components: {
-    PersonSelect,
-  },
-  data() {
-    return {
-      values: [],
-      value: "",
-    };
-  },
-};
+  import PersonSelect from "./PersonSelect";
+  export default {
+    name: "App",
+    components: {
+      PersonSelect,
+    },
+    data() {
+      return {
+        values: [],
+        value: null,
+      };
+    },
+  };
 </script>
 
 <style>
-#app {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 20px;
-}
+  #app {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+  }
 </style>

@@ -2,7 +2,7 @@
   <div class="wrapper">
     <el-select
       class="filter-select"
-      :value="personList.length ? value : null"
+      :value="value"
       remote
       :remote-method="getPersonList"
       filterable
@@ -42,160 +42,173 @@
 </template>
 
 <script>
-import { getPersonList, getDepartment } from "./request";
-export default {
-  model: {
-    event: "change",
-    prop: "value",
-  },
-  props: {
-    value: {
-      type: [String, Array, Number],
+  import { getDepartment, getPersonList } from "./request";
+  export default {
+    model: {
+      event: "change",
+      prop: "value",
     },
-    multiple: Boolean,
-  },
-  watch: {
-    multiple: {
-      handler(val) {
-        this.props.multiple = val;
+    props: {
+      value: {
+        type: [String, Array, Number],
       },
-      immediate: true,
+      multiple: Boolean,
     },
-  },
-  data() {
-    return {
-      popoverShow: false,
-      loading: false,
-      personList: [],
-      props: {
-        lazy: true,
-        value: "id",
-        emitPath: false,
-        lazyLoad: ({ root, data }, resolve) => {
-          if (root) {
-            getDepartment().then(resolve);
-          } else if (data.children) {
-            resolve(null);
-          } else {
-            getPersonList({ departmentId: data.id }).then((res) => {
-              resolve(
-                res.map(({ nickName: label, userId: id }) => ({
-                  id,
-                  label,
-                  leaf: true,
-                }))
-              );
-              this.syncCascaderCheckState();
-            });
-          }
+    watch: {
+      multiple: {
+        handler(val) {
+          this.props.multiple = val;
         },
+        immediate: true,
       },
-    };
-  },
-  methods: {
-    syncCascaderCheckState() {
-      if (this.multiple) {
-        this.$refs.cascader.syncMultiCheckState();
-      }
     },
-    handleSelectChange(value) {
-      this.$emit("change", value);
-
-      if (value && !this.multiple) {
-        this.personList = [
-          this.personList.find(({ userId }) => userId === value),
-        ];
-      }
+    data() {
+      return {
+        popoverShow: false,
+        loading: false,
+        personList: [],
+        props: {
+          lazy: true,
+          value: "id",
+          emitPath: false,
+          lazyLoad: ({ root, data }, resolve) => {
+            if (root) {
+              getDepartment().then(resolve);
+            } else if (data.children) {
+              resolve(null);
+            } else {
+              getPersonList({ departmentId: data.id }).then((res) => {
+                resolve(
+                  res.map(({ nickName: label, userId: id }) => ({
+                    id,
+                    label,
+                    leaf: true,
+                  }))
+                );
+                this.syncCascaderCheckState();
+              });
+            }
+          },
+        },
+      };
     },
-    handleSelectBlur() {
-      if (this.multiple) {
-        this.personList = this.personList.filter(({ userId }) =>
-          this.value.includes(userId)
-        );
-      }
-    },
-    handleCascaderChange(value) {
-      const { cascader } = this.$refs;
-      if (this.multiple) {
-        cascader.getCheckedNodes(true).forEach(({ data: { id, label } }) => {
-          if (this.personList.findIndex(({ userId }) => userId === id) === -1) {
-            this.personList.push({ nickName: label, userId: id });
-          }
-        });
-        this.$emit("change", [...new Set(value)]);
-      } else {
-        this.popoverShow = false;
-        if (value) {
-          this.$emit("change", value);
-          const [
-            {
-              data: { id, label },
-            },
-          ] = cascader.getCheckedNodes();
-          this.personList = [{ nickName: label, userId: id }];
+    methods: {
+      syncCascaderCheckState() {
+        if (this.multiple) {
+          this.$refs.cascader.syncMultiCheckState();
         }
-        cascader.clearCheckedNodes();
-        cascader.activePath = [];
-        cascader.menus = cascader.menus.slice(0, 1);
-      }
-    },
-    getPersonList(query) {
-      this.loading = true;
-      getPersonList({ keyword: query })
-        .then((res) => {
-          this.personList = res;
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
-    initPersonList() {
-      if (this.value) {
+      },
+      handleSelectChange(value) {
+        this.$emit("change", value);
+
+        if (value && !this.multiple) {
+          this.personList = [
+            this.personList.find(({ userId }) => userId === value),
+          ];
+        }
+      },
+      handleSelectBlur() {
+        if (this.multiple) {
+          this.personList = this.personList.filter(({ userId }) =>
+            this.value.includes(userId)
+          );
+        }
+      },
+      handleCascaderChange(value) {
+        const { cascader } = this.$refs;
+        if (this.multiple) {
+          cascader.getCheckedNodes(true).forEach(({ data: { id, label } }) => {
+            if (
+              this.personList.findIndex(({ userId }) => userId === id) === -1
+            ) {
+              this.personList.push({ nickName: label, userId: id });
+            }
+          });
+          this.$emit("change", [...new Set(value)]);
+        } else {
+          this.popoverShow = false;
+          this.$emit("change", value);
+
+          this.personList = cascader
+            .getCheckedNodes()
+            .map(({ data: { id, label } }) => ({
+              userId: id,
+              nickName: label,
+            }))
+            .filter(Boolean);
+          cascader.clearCheckedNodes();
+          cascader.activePath = [];
+          cascader.menus = cascader.menus.slice(0, 1);
+        }
+      },
+      getPersonList(query) {
         this.loading = true;
-        getPersonList()
+        getPersonList({ keyword: query })
           .then((res) => {
             this.personList = this.multiple
-              ? res.filter(({ userId }) => this.value.includes(userId))
-              : [res.find(({ userId }) => userId === this.value)];
+              ? res.concat(
+                  this.personList.filter(
+                    ({ userId }) =>
+                      this.value.includes(userId) &&
+                      !~res.findIndex(({ userId }) =>
+                        this.value.includes(userId)
+                      )
+                  )
+                )
+              : res;
           })
           .finally(() => {
             this.loading = false;
           });
-      }
+      },
+      initPersonList() {
+        if (this.value) {
+          this.loading = true;
+          getPersonList()
+            .then((res) => {
+              this.personList = this.multiple
+                ? res.filter(({ userId }) => this.value.includes(userId))
+                : [res.find(({ userId }) => userId === this.value)].filter(
+                    Boolean
+                  );
+            })
+            .finally(() => {
+              this.loading = false;
+            });
+        }
+      },
     },
-  },
-  created() {
-    this.initPersonList();
-  },
-};
+    created() {
+      this.initPersonList();
+    },
+  };
 </script>
 
 <style scoped>
-.wrapper {
-  display: inline-block;
-  position: relative;
-}
-.filter-select ::v-deep .el-input__suffix {
-  transform: translateX(-20px);
-}
-.suffix {
-  height: auto;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  margin: auto 0;
-  right: 10px;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-}
+  .wrapper {
+    display: inline-block;
+    position: relative;
+  }
+  .filter-select ::v-deep .el-input__suffix {
+    transform: translateX(-20px);
+  }
+  .suffix {
+    height: auto;
+    position: absolute;
+    bottom: 12px;
+    margin: auto 0;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+  }
 </style>
 
 <style>
-.person-select-popover {
-  padding: 0;
-}
-.person-select-popover .el-cascader-node[aria-haspopup] .el-checkbox {
-  display: none;
-}
+  .person-select-popover {
+    padding: 0;
+  }
+  .person-select-popover .el-cascader-node[aria-haspopup] .el-checkbox {
+    display: none;
+  }
 </style>
