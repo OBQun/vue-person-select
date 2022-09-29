@@ -1,6 +1,19 @@
 <template>
   <div id="app">
-    <person-select v-model="value"></person-select>
+    <div>
+      <person-select
+        v-model="value"
+        placeholder="单选"
+        clearable
+      ></person-select>
+    </div>
+    <div>
+      <person-select
+        v-model="values"
+        multiple
+        placeholder="多选"
+      ></person-select>
+    </div>
   </div>
 </template>
 
@@ -13,6 +26,7 @@ export default {
   },
   data() {
     return {
+      values: [],
       value: "",
     };
   },
@@ -20,4 +34,10 @@ export default {
 </script>
 
 <style>
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
 </style>
